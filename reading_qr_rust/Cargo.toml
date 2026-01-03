@@ -1,0 +1,18 @@
+[package]
+name = "reading_qr"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# Core library
+relm4 = { version = "0.10", features = ["libadwaita"] }
+# Optional: icons (more info at https://github.com/Relm4/icons)
+relm4-icons = "0.10"
+reqwest = {version = "0.13.1", features = ["json", "blocking"]}
+serde = "1.0.228"
+thiserror = "2.0.17"
+
+[features]
+default = ["libadwaita"]
+libadwaita = ["relm4/libadwaita"]
+gnome_49 = ["relm4/gnome_49"]
