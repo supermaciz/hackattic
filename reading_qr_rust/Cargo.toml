@@ -4,13 +4,17 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+bytes = "1.11.0"
 # Core library
 relm4 = { version = "0.10", features = ["libadwaita"] }
 # Optional: icons (more info at https://github.com/Relm4/icons)
 relm4-icons = "0.10"
 reqwest = {version = "0.13.1", features = ["json", "blocking"]}
+rqrr = "0.10.0"
 serde = "1.0.228"
 thiserror = "2.0.17"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+serde_json = "1.0.148"
 
 [features]
 default = ["libadwaita"]

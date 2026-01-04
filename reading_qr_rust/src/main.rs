@@ -1,32 +1,32 @@
 mod hackattic;
+mod qr_reader;
 
 use gtk::prelude::{BoxExt, ButtonExt, GtkWindowExt, OrientableExt, WidgetExt};
-use relm4::{
-    ComponentParts, ComponentSender, RelmApp, RelmWidgetExt,
-    SimpleComponent,
-};
+use relm4::{ComponentParts, ComponentSender, RelmApp, RelmWidgetExt, SimpleComponent};
 use relm4::{adw, gtk};
 
 struct AppModel {
-    counter: u8,
+    solution: String,
+    hackattic_response: String,
     image: gtk::Picture,
+    image_bytes: bytes::Bytes,
 }
 
 #[derive(Debug)]
 enum AppMsg {
-    Increment,
-    Decrement,
+    Decode,
+    Submit,
 }
 
 #[relm4::component]
 impl SimpleComponent for AppModel {
-    type Init = u8;
+    type Init = String;
     type Input = AppMsg;
     type Output = ();
 
     view! {
         adw::ApplicationWindow {
-            set_title: Some("Mon app à la con"),
+            set_title: Some("Let's solve Reading QR"),
             set_default_width: 600,
             set_default_height: 700,
 
@@ -56,30 +56,35 @@ impl SimpleComponent for AppModel {
                     set_halign: gtk::Align::Center,
                     set_valign: gtk::Align::Center,
 
-                    gtk::Label {
-                        #[watch]
-                        set_label: &format!("{}", model.counter),
-                        add_css_class: "title-1",
-                    },
-
                     gtk::Box {
-                        set_orientation: gtk::Orientation::Horizontal,
+                        set_orientation: gtk::Orientation::Vertical,
                         set_spacing: 12,
                         set_halign: gtk::Align::Center,
 
                         gtk::Button {
-                            set_label: "Decrement",
+                            set_label: "Decode",
                             set_width_request: 120,
-                            add_css_class: "pill",
-                            connect_clicked => AppMsg::Decrement
+                            connect_clicked => AppMsg::Decode
+                        },
+                        gtk::Label {
+                            #[watch]
+                            set_label: &format!("{}", model.solution),
+                            add_css_class: "title-1"
                         },
                         gtk::Button {
-                            set_label: "Increment",
+                            set_label: "Submit solution",
+                            #[watch]
+                            set_sensitive: !model.solution.is_empty(),
                             set_width_request: 120,
                             add_css_class: "pill",
                             add_css_class: "suggested-action",
-                            connect_clicked => AppMsg::Increment
+                            connect_clicked => AppMsg::Submit
                         },
+                        gtk::Label {
+                            #[watch]
+                            set_label: model.hackattic_response.as_str(),
+                            add_css_class: "body-2"
+                        }
                     }
                 }
             }
@@ -88,7 +93,7 @@ impl SimpleComponent for AppModel {
 
     // Initialize the component.
     fn init(
-        counter: Self::Init,
+        solution: Self::Init,
         window: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
@@ -97,25 +102,26 @@ impl SimpleComponent for AppModel {
 
         // Create a Picture widget
         let image = gtk::Picture::new();
-        image.set_can_shrink(false);
+        let mut image_bytes = bytes::Bytes::new();
 
         // Fetch and load the image
         if let Ok(response) = reqwest::blocking::get(&image_url) {
             if let Ok(bytes) = response.bytes() {
+                image_bytes = bytes.clone();
                 let glib_bytes = gtk::glib::Bytes::from(&bytes.to_vec());
                 if let Ok(texture) = gtk::gdk::Texture::from_bytes(&glib_bytes) {
                     image.set_paintable(Some(&texture));
-                    // Set a large size to make the QR code readable
-                    image.set_size_request(425, 425);
                 }
             }
         }
-
-        let model = AppModel { counter, image };
+        let model = AppModel {
+            solution,
+            image,
+            image_bytes,
+            hackattic_response: String::new(),
+        };
 
         let image_widget = gtk::Box::new(gtk::Orientation::Vertical, 0);
-        image_widget.set_vexpand(true);
-        image_widget.set_hexpand(true);
         image_widget.set_halign(gtk::Align::Center);
         image_widget.set_valign(gtk::Align::Center);
         image_widget.append(&model.image);
@@ -127,24 +133,25 @@ impl SimpleComponent for AppModel {
 
     fn update(&mut self, msg: Self::Input, _sender: ComponentSender<Self>) {
         match msg {
-            AppMsg::Increment => {
-                self.counter = self.counter.wrapping_add(1);
+            AppMsg::Decode => {
+                println!("Decode QR code");
+                match qr_reader::read_qr(self.image_bytes.clone()) {
+                    Ok(solution) => self.solution = solution,
+                    Err(e) => println!("Error: {:?}", e),
+                }
             }
-            AppMsg::Decrement => {
-                self.counter = self.counter.wrapping_sub(1);
+            AppMsg::Submit => {
+                println!("Submit solution");
+                match hackattic::post_solution(&self.solution) {
+                    Ok(response) => self.hackattic_response = response,
+                    Err(e) => println!("Error: {:?}", e),
+                }
             }
         }
     }
-
-    // // Update the view to represent the updated model.
-    // fn update_view(&self, widgets: &mut Self::Widgets, _sender: ComponentSender<Self>) {
-    //     widgets
-    //         .label
-    //         .set_label(&format!("Counter: {}", self.counter));
-    // }
 }
 
 fn main() {
     let app = RelmApp::new("relm4.example.simple_manual");
-    app.run::<AppModel>(0);
+    app.run::<AppModel>(String::from(""));
 }
