@@ -1,21 +1,42 @@
-# HelpMeUnpack
+# HelpMeUnpack (Elixir)
 
-**TODO: Add description**
+Small Elixir client for the Hackattic "Help me unpack" challenge.
 
-## Installation
+It:
+- fetches the base64-encoded byte payload from Hackattic
+- unpacks the values using bitstring pattern matching (little-endian + one big-endian double)
+- submits the resulting JSON back to Hackattic
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `help_me_unpack_elixir` to your list of dependencies in `mix.exs`:
+## Requirements
 
-```elixir
-def deps do
-  [
-    {:help_me_unpack_elixir, "~> 0.1.0"}
-  ]
-end
+- Elixir ~> 1.19
+
+## Run
+
+1) Fetch deps:
+
+```sh
+mix deps.get
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/help_me_unpack_elixir>.
+2) Set your Hackattic access token (used by `config/runtime.exs`):
 
+```sh
+export HACKATTIC_TOKEN="YOUR_TOKEN"
+```
+
+3) Run:
+
+```sh
+mix run -e 'HelpMeUnpack.solve()'
+```
+
+If you prefer IEx:
+
+```sh
+HACKATTIC_TOKEN="YOUR_TOKEN" iex -S mix
+```
+
+```elixir
+HelpMeUnpack.solve()
+```
